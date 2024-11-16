@@ -114,7 +114,6 @@ const {
     },
     user: async function (req, cb) {
       projectId = req.params.projectId;
-      console.log(req.user)
       municipality_id = req.user.municipality.id;
       if (req.user) {
         cb(null, req.user);
