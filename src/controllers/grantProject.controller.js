@@ -5,7 +5,6 @@ const models = require('../models/index');
 
 async function createProject(req, res, next) {
   try {
-    const projectId = req.params;
     let user_id = req.user.id;
     const municipalityId = req.user.municipality && req.user.municipality.id;
     let projectData = req.body;
@@ -13,8 +12,8 @@ async function createProject(req, res, next) {
     projectData.ward_id = req.user.ward_id;
     projectData.municipality_id = municipalityId;
     projectData.isSubmitted = true;
-    
-    let project = await models.grant_projects.update({projectData}, {where:{id: projectId}});
+    console.log(req.user.role);
+    let project = await models.grant_projects.create(projectData);
 
     res.send({
       data: { project },
@@ -52,7 +51,7 @@ async function getProject(req, res, next) {
     const municipalityId = req.user.municipality && req.user.municipality.id;
     const municipality_id = municipalityId;
     
-    let project = await models.grant_projects.findOne({where:{municipality_id}});
+    let project = await models.grant_projects.findAll({where:{municipality_id}});
 
     res.send({
       data: { project },
@@ -71,7 +70,7 @@ async function getProjectByWard(req, res, next) {
     const ward_id = req.user.ward_id;
     const municipality_id = municipalityId;
     
-    let project = await models.grant_projects.findOne({where:{municipality_id, ward_id}});
+    let project = await models.grant_projects.findAll({where:{municipality_id, ward_id}});
 
     res.send({
       data: { project },
@@ -106,12 +105,19 @@ async function updateProject(req, res, next) {
     let userId = req.user.id;
     let project_detail = await models.grant_projects.findOne({where: {id: projectId}});
 
-    if(project_detail && project_detail.isVerified ===  'true') {
+ if(project_detail && project_detail.isVerified ===  true ) {
       res.send({
         message: 'You cannot modify this project',
         success: true
       })
     }
+    if(project_detail && project_detail.isSubmitted === true) {
+      res.send({
+        message: 'You cannot modify this project',
+        success: true
+      })
+    }
+   
 
     if(project_detail.creator_id !== userId){
       res.send({
@@ -123,7 +129,36 @@ async function updateProject(req, res, next) {
 
     res.send({
       data: { project },
-      message: 'Project Created Successfully',
+      message: 'Project updateded Successfully',
+      success: true,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function verifyProject(req, res, next) {
+  try {
+    let {projectId} = req.params;
+    let userId = req.user.id;
+    let project_detail = await models.grant_projects.findOne({where: {id: projectId}});
+   
+    if(project_detail.creator_id !== userId){
+      res.send({
+        message: 'You are not authorized to modify this project',
+        success: true
+      })
+    }
+
+    let verify;
+    if(project_detail.isVerified = true){
+      verify = false;
+    }else verify = true;
+    let project = await models.grant_projects.update({approver_id: userId, isVerified: verify},{where: {id: projectId}});
+
+    res.send({
+      data: { project },
+      message: 'Project updateded Successfully',
       success: true,
     });
   } catch (err) {
@@ -137,5 +172,6 @@ module.exports = {
     getProjectByWard,
     getProject,
     draftProject,
-    updateProject
+    updateProject,
+    verifyProject
 }
